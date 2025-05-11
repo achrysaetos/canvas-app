@@ -9,9 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
 export default function WhiteboardPage() {
   const [currentTool, setCurrentTool] = useState<string>('select');
   const [elements, setElements] = useState<CanvasElement[]>([]);
-
-  // State for the element currently being edited (if any)
   const [editingElement, setEditingElement] = useState<CanvasElement | null>(null);
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null); // State for selected element ID
 
   const toolbarWrapperRef = useRef<HTMLDivElement>(null);
   const [toolbarHeight, setToolbarHeight] = useState(0);
@@ -32,49 +31,72 @@ export default function WhiteboardPage() {
     if (newElementPartial.type === 'text') {
       fullElement = {
         ...newElementPartial,
-        text: newElementPartial.text || "Type here...", // Default text for new text elements
+        text: newElementPartial.text || "Type here...",
         fill: newElementPartial.fill || 'black',
-        // Konva determines width/height for text based on content and fontSize
+        fontSize: newElementPartial.fontSize || 20,
+        fontFamily: newElementPartial.fontFamily || 'sans-serif',
       };
     } else {
       fullElement = newElementPartial;
     }
     const elementWithId: CanvasElement = { ...fullElement, id: uuidv4() };
     setElements((prevElements) => [...prevElements, elementWithId]);
-    // If it's a new text element, maybe we want to edit it immediately?
-    // if (fullElement.type === 'text') {
-    //   setEditingElement(elementWithId);
-    // }
+    // setSelectedElementId(elementWithId.id); // Optionally select new elements
+    // if (fullElement.type === 'text') setEditingElement(elementWithId); // Optionally edit new text elements
   };
 
   const updateElement = (updatedElement: CanvasElement) => {
     setElements((prevElements) =>
       prevElements.map((el) => (el.id === updatedElement.id ? updatedElement : el))
     );
-    setEditingElement(null); // Stop editing after update
+    // setEditingElement(null); // EditingElement is set to null by Canvas interactions already
   };
 
-  // This function will be called by Canvas when the user clicks (or dblclicks) a text element
-  // or when a new text element is added and we want to edit it immediately.
   const handleSetEditingElement = (element: CanvasElement | null) => {
     setEditingElement(element);
+    if (element) setSelectedElementId(element.id); // Also select if starting to edit
+    else setSelectedElementId(null); // Or clear selection if stopping edit
+  };
+
+  const handleSetSelectedElementId = (id: string | null) => {
+    setSelectedElementId(id);
+    if (id === null) {
+      setEditingElement(null); // Stop editing if deselecting
+    }
+    // If an element is selected, and it's different from the currently editing one, stop editing.
+    if (id && editingElement && id !== editingElement.id) {
+        setEditingElement(null);
+    }
+  };
+
+  const deleteSelectedElement = () => {
+    if (!selectedElementId) return;
+    setElements((prevElements) => prevElements.filter((el) => el.id !== selectedElementId));
+    setSelectedElementId(null);
+    setEditingElement(null);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative' }}>
       <div ref={toolbarWrapperRef}>
-        <Toolbar currentTool={currentTool} setCurrentTool={setCurrentTool} />
+        <Toolbar
+          currentTool={currentTool}
+          setCurrentTool={setCurrentTool}
+          deleteSelectedElement={deleteSelectedElement} // Pass delete function
+          selectedElementId={selectedElementId} // Pass selectedId to enable/disable delete button
+        />
       </div>
       <Canvas
         currentTool={currentTool}
         elements={elements}
-        addElement={addElement} // Used by Canvas to add new elements (rectangles, or new text placeholders)
+        addElement={addElement}
         toolbarHeight={toolbarHeight}
-        editingElement={editingElement} // Pass the element being edited (or null)
-        onSetEditingElement={handleSetEditingElement} // Allows Canvas to tell Page which element to edit
-        onUpdateElement={updateElement} // Allows Canvas to send updated element data to Page
+        editingElement={editingElement}
+        onSetEditingElement={handleSetEditingElement}
+        onUpdateElement={updateElement}
+        selectedElementId={selectedElementId} // Pass selectedId
+        onSetSelectedElementId={handleSetSelectedElementId} // Pass setter
       />
-      {/* The HTML textarea for editing will now be managed INSIDE Canvas.tsx */}
     </div>
   );
 }

@@ -56,7 +56,7 @@ This phase focuses on implementing the core frontend requirements with a basic b
         *   Make elements clickable. On click, set a `selectedElementId` in the state.
         *   Visually indicate the selected element (e.g., using `Konva.Transformer` or changing stroke).
 3.  **Deletion:**
-    *   Add a "Delete" button to the `Toolbar` (or enable delete via Backspace key).
+    *   Add a "Delete" button to the `Toolbar`.
     *   If an element is selected, clicking "Delete" (or pressing the key) should:
         *   Remove the element from the elements array in the state.
         *   Trigger a re-render of the canvas.

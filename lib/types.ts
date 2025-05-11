@@ -11,5 +11,7 @@ export interface CanvasElement {
   fill: string;
   fontSize?: number; // Added for text elements
   fontFamily?: string; // Added for text elements
+  stroke?: string; // Added for element stroke color
+  strokeWidth?: number; // Added for element stroke width
   // Add other properties like stroke, strokeWidth, etc. as needed
 } 

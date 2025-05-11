@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text as KonvaText } from 'react-konva';
+import { Stage, Layer, Rect, Text as KonvaText, Transformer } from 'react-konva';
 import { CanvasElement } from '../../lib/types';
 import Konva from 'konva';
 
@@ -13,6 +13,8 @@ interface CanvasProps {
   editingElement: CanvasElement | null;
   onSetEditingElement: (element: CanvasElement | null) => void;
   onUpdateElement: (element: CanvasElement) => void;
+  selectedElementId: string | null;
+  onSetSelectedElementId: (id: string | null) => void;
 }
 
 const Canvas: React.FC<CanvasProps> = ({
@@ -23,9 +25,12 @@ const Canvas: React.FC<CanvasProps> = ({
   editingElement,
   onSetEditingElement,
   onUpdateElement,
+  selectedElementId,
+  onSetSelectedElementId,
 }) => {
   const stageRef = useRef<Konva.Stage>(null);
   const layerRef = useRef<Konva.Layer>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingRect, setDrawingRect] = useState<Omit<CanvasElement, 'id' | 'type' | 'fill'> & { fill?: string } | null>(null);
@@ -38,10 +43,30 @@ const Canvas: React.FC<CanvasProps> = ({
     console.log("Current tool in Canvas:", currentTool, "Toolbar Height:", toolbarHeight);
     setIsDrawing(false);
     setDrawingRect(null);
-    if (editingElement && editingElement.type !== 'text') {
-        onSetEditingElement(null);
+    if (currentTool !== 'select' && currentTool !== 'text') {
+      onSetSelectedElementId(null);
+      if (editingElement) onSetEditingElement(null);
     }
-  }, [currentTool, toolbarHeight, editingElement, onSetEditingElement]);
+    if (editingElement && editingElement.type !== 'text') {
+      onSetEditingElement(null);
+    }
+  }, [currentTool, toolbarHeight, editingElement, onSetEditingElement, onSetSelectedElementId]);
+
+  useEffect(() => {
+    if (transformerRef.current && stageRef.current) {
+      if (selectedElementId && currentTool === 'select') {
+        const selectedNode = stageRef.current.findOne(`#${selectedElementId}`);
+        if (selectedNode) {
+          transformerRef.current.nodes([selectedNode]);
+        } else {
+          transformerRef.current.nodes([]);
+        }
+      } else {
+        transformerRef.current.nodes([]);
+      }
+      transformerRef.current.getLayer()?.batchDraw();
+    }
+  }, [selectedElementId, elements, currentTool]);
 
   useEffect(() => {
     if (editingElement && editingElement.type === 'text' && stageRef.current && layerRef.current) {
@@ -102,7 +127,12 @@ const Canvas: React.FC<CanvasProps> = ({
     }
   };
 
-  const handleMouseDown = () => {
+  const handleStageMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (e.target === e.currentTarget && currentTool === 'select') {
+      onSetSelectedElementId(null);
+      if (editingElement) onSetEditingElement(null);
+    }
+
     const stage = stageRef.current;
     if (!stage) return;
     const pos = stage.getPointerPosition();
@@ -110,10 +140,12 @@ const Canvas: React.FC<CanvasProps> = ({
 
     if (currentTool === 'rectangle') {
       if (editingElement) onSetEditingElement(null);
+      if (selectedElementId) onSetSelectedElementId(null);
       setIsDrawing(true);
       setDrawingRect({ x: pos.x, y: pos.y, width: 0, height: 0, fill: 'rgba(0,0,255,0.5)' });
     } else if (currentTool === 'text') {
       if (editingElement) onSetEditingElement(null);
+      if (selectedElementId) onSetSelectedElementId(null);
       addElement({ type: 'text', x: pos.x, y: pos.y, text: 'Type here...', fill: 'black' });
     }
   };
@@ -159,13 +191,15 @@ const Canvas: React.FC<CanvasProps> = ({
         height={stageDimensions.height}
         ref={stageRef}
         style={{ border: '1px solid #ccc', backgroundColor: '#f0f0f0' }}
-        onMouseDown={handleMouseDown}
+        onMouseDown={handleStageMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
       >
         <Layer ref={layerRef}>
           {elements.map((el) => {
             const isCurrentlyEditing = editingElement && editingElement.id === el.id && editingElement.type === 'text';
+            const isSelected = selectedElementId === el.id && currentTool === 'select';
+
             if (el.type === 'rectangle' && el.width && el.height) {
               return (
                 <Rect
@@ -177,9 +211,13 @@ const Canvas: React.FC<CanvasProps> = ({
                   height={el.height}
                   fill={el.fill}
                   draggable={currentTool === 'select'}
+                  stroke={isSelected ? 'dodgerblue' : el.stroke || 'black'}
+                  strokeWidth={isSelected ? 2 : el.strokeWidth || 0}
                   onClick={() => {
-                    if (currentTool === 'select') console.log('Selected Rectangle:', el);
-                    if (editingElement) onSetEditingElement(null);
+                    if (currentTool === 'select') {
+                      onSetSelectedElementId(el.id);
+                      if (editingElement) onSetEditingElement(null);
+                    }
                   }}
                 />
               );
@@ -197,13 +235,18 @@ const Canvas: React.FC<CanvasProps> = ({
                   fill={el.fill}
                   draggable={currentTool === 'select'}
                   visible={!isCurrentlyEditing}
+                  stroke={isSelected ? 'dodgerblue' : undefined}
+                  strokeWidth={isSelected ? 2 : undefined}
                   onDblClick={() => {
                     if (currentTool === 'select' || currentTool === 'text') {
                       onSetEditingElement(el);
                     }
                   }}
                   onClick={() => {
-                     if (currentTool === 'select') console.log('Selected Text:', el);
+                    if (currentTool === 'select') {
+                      onSetSelectedElementId(el.id);
+                      if (editingElement && editingElement.id !== el.id) onSetEditingElement(null);
+                    }
                   }}
                 />
               );
@@ -220,6 +263,17 @@ const Canvas: React.FC<CanvasProps> = ({
               stroke="black"
               strokeWidth={1}
             />
+          )}
+          {currentTool === 'select' && (
+             <Transformer
+                ref={transformerRef}
+                boundBoxFunc={(oldBox, newBox) => {
+                  if (newBox.width < 5 || newBox.height < 5) {
+                    return oldBox;
+                  }
+                  return newBox;
+                }}
+             />
           )}
         </Layer>
       </Stage>
