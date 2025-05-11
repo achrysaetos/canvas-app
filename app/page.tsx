@@ -15,6 +15,33 @@ export default function WhiteboardPage() {
   const toolbarWrapperRef = useRef<HTMLDivElement>(null);
   const [toolbarHeight, setToolbarHeight] = useState(0);
 
+  const canvasId = "canvas01"; // Define canvasId
+
+  useEffect(() => {
+    const fetchElements = async () => {
+      try {
+        const response = await fetch(`/api/canvases/${canvasId}/elements`);
+        if (!response.ok) {
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch {
+            // Ignore if response is not JSON
+          }
+          console.error('Failed to fetch elements. Status:', response.status, 'Data:', errorData);
+          throw new Error(`Failed to fetch elements: ${errorData?.message || response.statusText}`);
+        }
+        const fetchedElements: CanvasElement[] = await response.json();
+        setElements(fetchedElements);
+        console.log('Elements fetched successfully:', fetchedElements);
+      } catch (error) {
+        console.error('Error fetching elements:', error);
+        // setElements([]); // Optionally clear elements or show an error message
+      }
+    };
+    fetchElements();
+  }, []); // Empty dependency array ensures this runs only once on mount
+
   useEffect(() => {
     const updateToolbarHeight = () => {
       if (toolbarWrapperRef.current) {
@@ -26,7 +53,7 @@ export default function WhiteboardPage() {
     return () => window.removeEventListener('resize', updateToolbarHeight);
   }, []);
 
-  const addElement = (newElementPartial: Omit<CanvasElement, 'id'>) => {
+  const addElement = async (newElementPartial: Omit<CanvasElement, 'id'>) => {
     let fullElement: Omit<CanvasElement, 'id'>;
     if (newElementPartial.type === 'text') {
       fullElement = {
@@ -41,14 +68,59 @@ export default function WhiteboardPage() {
     }
     const elementWithId: CanvasElement = { ...fullElement, id: uuidv4() };
     setElements((prevElements) => [...prevElements, elementWithId]);
+
+    try {
+      const response = await fetch(`/api/canvases/${canvasId}/elements`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(elementWithId),
+      });
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          // Ignore if response is not JSON
+        }
+        console.error('Failed to add element. Status:', response.status, 'Data:', errorData);
+        throw new Error(`Failed to add element: ${errorData?.message || response.statusText}`);
+      }
+      // const savedElement = await response.json(); // Optional: use saved element
+      console.log('Element added successfully:', elementWithId);
+    } catch (error) {
+      console.error('Error adding element:', error);
+      // Optionally: revert state update if API call fails
+      // setElements((prevElements) => prevElements.filter(el => el.id !== elementWithId.id));
+    }
     // setSelectedElementId(elementWithId.id); // Optionally select new elements
     // if (fullElement.type === 'text') setEditingElement(elementWithId); // Optionally edit new text elements
   };
 
-  const updateElement = (updatedElement: CanvasElement) => {
+  const updateElement = async (updatedElement: CanvasElement) => {
+    const oldElements = elements;
     setElements((prevElements) =>
       prevElements.map((el) => (el.id === updatedElement.id ? updatedElement : el))
     );
+
+    try {
+      const response = await fetch(`/api/canvases/${canvasId}/elements/${updatedElement.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedElement),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to update element: ${response.statusText}`);
+      }
+      console.log('Element updated successfully:', updatedElement);
+    } catch (error) {
+      console.error('Error updating element:', error);
+      // Optionally: revert state update if API call fails
+      setElements(oldElements);
+    }
     // setEditingElement(null); // EditingElement is set to null by Canvas interactions already
   };
 
@@ -69,11 +141,32 @@ export default function WhiteboardPage() {
     }
   };
 
-  const deleteSelectedElement = () => {
+  const deleteSelectedElement = async () => {
     if (!selectedElementId) return;
+
+    const oldElements = elements;
+    const elementToDelete = elements.find(el => el.id === selectedElementId);
+
     setElements((prevElements) => prevElements.filter((el) => el.id !== selectedElementId));
     setSelectedElementId(null);
     setEditingElement(null);
+
+    if (elementToDelete) {
+      try {
+        const response = await fetch(`/api/canvases/${canvasId}/elements/${elementToDelete.id}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to delete element: ${response.statusText}`);
+        }
+        console.log('Element deleted successfully:', elementToDelete.id);
+      } catch (error) {
+        console.error('Error deleting element:', error);
+        // Optionally: revert state update if API call fails
+        setElements(oldElements);
+        setSelectedElementId(elementToDelete.id); // Reselect if delete failed
+      }
+    }
   };
 
   return (

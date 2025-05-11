@@ -219,6 +219,52 @@ const Canvas: React.FC<CanvasProps> = ({
                       if (editingElement) onSetEditingElement(null);
                     }
                   }}
+                  onDragEnd={(e) => {
+                    if (currentTool === 'select') {
+                      const node = e.target;
+                      onUpdateElement({
+                        ...el,
+                        x: node.x(),
+                        y: node.y(),
+                      });
+                    }
+                  }}
+                  onTransformEnd={(e) => {
+                    if (currentTool === 'select') {
+                      const node = e.target;
+                      const scaleX = node.scaleX();
+                      const scaleY = node.scaleY();
+                      node.scaleX(1); // Reset scale for future transformations
+                      node.scaleY(1);
+
+                      let newWidth = el.width;
+                      let newHeight = el.height;
+
+                      if (el.type === 'rectangle') {
+                        newWidth = Math.max(5, (el.width || 0) * scaleX);
+                        newHeight = Math.max(5, (el.height || 0) * scaleY);
+                      } else if (el.type === 'text') {
+                        // For text, font size scaling might be preferred, or adjust width/height if your text elements have them
+                        // This example assumes text elements might not have explicit width/height to be scaled like shapes
+                        // If you store width/height for text and want to scale them:
+                        // newWidth = Math.max(5, (el.width || node.width()) * scaleX);
+                        // newHeight = Math.max(5, (el.height || node.height()) * scaleY);
+                        // Or, adjust fontSize:
+                        // const newFontSize = Math.max(5, (el.fontSize || 20) * Math.min(scaleX, scaleY)); // or Math.max
+                        // onUpdateElement({ ...el, x: node.x(), y: node.y(), fontSize: newFontSize });
+                        // For simplicity, just updating position for text on transform for now.
+                      }
+
+                      onUpdateElement({
+                        ...el,
+                        x: node.x(),
+                        y: node.y(),
+                        width: newWidth,
+                        height: newHeight,
+                        // rotation: node.rotation() // if you enable rotation
+                      });
+                    }
+                  }}
                 />
               );
             }
@@ -246,6 +292,52 @@ const Canvas: React.FC<CanvasProps> = ({
                     if (currentTool === 'select') {
                       onSetSelectedElementId(el.id);
                       if (editingElement && editingElement.id !== el.id) onSetEditingElement(null);
+                    }
+                  }}
+                  onDragEnd={(e) => {
+                    if (currentTool === 'select') {
+                      const node = e.target;
+                      onUpdateElement({
+                        ...el,
+                        x: node.x(),
+                        y: node.y(),
+                      });
+                    }
+                  }}
+                  onTransformEnd={(e) => {
+                    if (currentTool === 'select') {
+                      const node = e.target;
+                      const scaleX = node.scaleX();
+                      const scaleY = node.scaleY();
+                      node.scaleX(1); // Reset scale for future transformations
+                      node.scaleY(1);
+
+                      let newWidth = el.width;
+                      let newHeight = el.height;
+
+                      if (el.type === 'rectangle') {
+                        newWidth = Math.max(5, (el.width || 0) * scaleX);
+                        newHeight = Math.max(5, (el.height || 0) * scaleY);
+                      } else if (el.type === 'text') {
+                        // For text, font size scaling might be preferred, or adjust width/height if your text elements have them
+                        // This example assumes text elements might not have explicit width/height to be scaled like shapes
+                        // If you store width/height for text and want to scale them:
+                        // newWidth = Math.max(5, (el.width || node.width()) * scaleX);
+                        // newHeight = Math.max(5, (el.height || node.height()) * scaleY);
+                        // Or, adjust fontSize:
+                        // const newFontSize = Math.max(5, (el.fontSize || 20) * Math.min(scaleX, scaleY)); // or Math.max
+                        // onUpdateElement({ ...el, x: node.x(), y: node.y(), fontSize: newFontSize });
+                        // For simplicity, just updating position for text on transform for now.
+                      }
+
+                      onUpdateElement({
+                        ...el,
+                        x: node.x(),
+                        y: node.y(),
+                        width: newWidth,
+                        height: newHeight,
+                        // rotation: node.rotation() // if you enable rotation
+                      });
                     }
                   }}
                 />

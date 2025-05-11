@@ -59,16 +59,16 @@ Use any frontend framework of your choice (e.g., React, Vue, Svelte) to implemen
 
 *   **Backend Framework:** Next.js API Routes
     *   Leverage the built-in API route functionality within Next.js to create backend endpoints.
-*   **Database:** MongoDB (Cloud-hosted, e.g., MongoDB Atlas)
-*   **Data Models (MongoDB Collections):**
+*   **Database:** AWS DynamoDB (Cloud-hosted)
+*   **Data Models (AWS DynamoDB Tables):**
     *   `canvases`:
-        *   `_id`: ObjectId (Canvas ID)
+        *   `canvasId`: String (Canvas ID)
         *   `name`: String (e.g., "My First Board")
         *   `createdAt`: Timestamp
         *   `updatedAt`: Timestamp
     *   `elements`:
-        *   `_id`: ObjectId (Element ID)
-        *   `canvasId`: ObjectId (foreign key to `canvases` collection)
+        *   `elementId`: String (Element ID)
+        *   `canvasId`: String (foreign key to `canvases` table)
         *   `type`: String ("rectangle", "text")
         *   `x`: Number
         *   `y`: Number
