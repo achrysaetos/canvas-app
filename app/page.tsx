@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import Canvas from '../components/canvas/Canvas';
 import Toolbar from '../components/ui/Toolbar';
 import { CanvasElement } from '../lib/types';
-import { v4 as uuidv4 } from 'uuid';
 
 export default function WhiteboardPage() {
   const [currentTool, setCurrentTool] = useState<string>('select');
@@ -54,9 +53,9 @@ export default function WhiteboardPage() {
   }, []);
 
   const addElement = async (newElementPartial: Omit<CanvasElement, 'id'>) => {
-    let fullElement: Omit<CanvasElement, 'id'>;
+    let fullElementOnFrontend: Omit<CanvasElement, 'id'>; // Renamed to avoid confusion
     if (newElementPartial.type === 'text') {
-      fullElement = {
+      fullElementOnFrontend = {
         ...newElementPartial,
         text: newElementPartial.text || "Type here...",
         fill: newElementPartial.fill || 'black',
@@ -64,19 +63,22 @@ export default function WhiteboardPage() {
         fontFamily: newElementPartial.fontFamily || 'sans-serif',
       };
     } else {
-      fullElement = newElementPartial;
+      fullElementOnFrontend = newElementPartial;
     }
-    const elementWithId: CanvasElement = { ...fullElement, id: uuidv4() };
-    setElements((prevElements) => [...prevElements, elementWithId]);
+    // No longer create elementWithId here for optimistic update with frontend ID
+    // Optimistic update will use a temporary ID or handle differently if needed,
+    // but final state should come from backend response.
 
     try {
+      // Send only the necessary data, backend will generate ID
       const response = await fetch(`/api/canvases/${canvasId}/elements`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(elementWithId),
+        body: JSON.stringify(fullElementOnFrontend), // Send data without frontend ID
       });
+
       if (!response.ok) {
         let errorData;
         try {
@@ -87,15 +89,20 @@ export default function WhiteboardPage() {
         console.error('Failed to add element. Status:', response.status, 'Data:', errorData);
         throw new Error(`Failed to add element: ${errorData?.message || response.statusText}`);
       }
-      // const savedElement = await response.json(); // Optional: use saved element
-      console.log('Element added successfully:', elementWithId);
+      
+      const savedElement = await response.json() as CanvasElement; // Element from backend with backend-generated ID
+      
+      setElements((prevElements) => [...prevElements, savedElement]); // Add the confirmed element from backend
+      console.log('Element added successfully with backend ID:', savedElement);
+
+      // Optionally select new elements or set for editing
+      // setSelectedElementId(savedElement.id);
+      // if (savedElement.type === 'text') setEditingElement(savedElement);
+
     } catch (error) {
       console.error('Error adding element:', error);
-      // Optionally: revert state update if API call fails
-      // setElements((prevElements) => prevElements.filter(el => el.id !== elementWithId.id));
+      // Consider how to handle error: maybe remove an optimistically added element if you had one
     }
-    // setSelectedElementId(elementWithId.id); // Optionally select new elements
-    // if (fullElement.type === 'text') setEditingElement(elementWithId); // Optionally edit new text elements
   };
 
   const updateElement = async (updatedElement: CanvasElement) => {

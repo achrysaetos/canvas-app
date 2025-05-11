@@ -42,7 +42,8 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     let firstAttribute = true;
 
     // It's good practice to prevent updating the primary keys (canvasId, elementId) or type if it dictates structure
-    const forbiddenUpdates = ['canvasId', 'elementId', 'type']; 
+    // Also, createdAt should not be changed, and updatedAt will be set explicitly with a new server timestamp.
+    const forbiddenUpdates = ['canvasId', 'elementId', 'type', 'createdAt', 'updatedAt']; 
 
     for (const [key, value] of Object.entries(body)) {
       if (value === undefined || forbiddenUpdates.includes(key)) continue; // Skip undefined values and forbidden keys
@@ -106,7 +107,14 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     });
     await docClient.send(updateCanvasTimestampCommand);
 
-    return NextResponse.json(updatedElement, { status: 200 });
+    // Map elementId to id for the response, consistent with GET all elements
+    if (updatedElement) {
+      const { elementId: elId, ...rest } = updatedElement;
+      const elementToReturn = { id: elId, ...rest };
+      return NextResponse.json(elementToReturn, { status: 200 });
+    }
+    // Should not be reached if updatedElement was null due to earlier check, but as a fallback:
+    return NextResponse.json({ error: 'Element updated but could not retrieve complete data' }, { status: 500 });
 
   } catch (error) {
     console.error(`Error updating element ${elementId} in canvas ${canvasId}:`, error);
