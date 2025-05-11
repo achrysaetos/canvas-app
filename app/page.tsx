@@ -1,32 +1,17 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Stage, Layer, Rect, Circle, Text } from 'react-konva';
+import React, { useState } from 'react';
+import Canvas from '../components/canvas/Canvas';
+import Toolbar from '../components/ui/Toolbar';
 
-const App = () => {
+export default function WhiteboardPage() {
+  // Basic state for tool selection, will be expanded later
+  const [currentTool, setCurrentTool] = useState<string>('select'); // Default tool
+
   return (
-    <Stage width={window.innerWidth} height={window.innerHeight}>
-      <Layer>
-        <Text text="Try to drag shapes" fontSize={15} />
-        <Rect
-          x={20}
-          y={50}
-          width={100}
-          height={100}
-          fill="red"
-          shadowBlur={10}
-          draggable
-        />
-        <Circle
-          x={200}
-          y={100}
-          radius={50}
-          fill="green"
-          draggable
-        />
-      </Layer>
-    </Stage>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <Toolbar currentTool={currentTool} setCurrentTool={setCurrentTool} />
+      <Canvas currentTool={currentTool} />
+    </div>
   );
-};
-
-export default App;
+}

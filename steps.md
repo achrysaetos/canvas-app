@@ -5,18 +5,15 @@
 This phase focuses on implementing the core frontend requirements with a basic backend for initial persistence.
 
 ### I. Project Setup & Initial Frontend Structure
-1.  **Initialize Next.js Project:**
-    *   Command: `npx create-next-app@latest whiteboard-app --typescript --eslint --tailwind --src-dir --app --import-alias "@/*"` (or similar, Tailwind is optional but good for quick styling)
-    *   Verify project runs.
-2.  **Install Dependencies:**
+1.  **Install Dependencies:**
     *   `npm install konva react-konva`
     *   `npm install zustand` (for state management, optional, can start with Context API)
-3.  **Basic Project Structure:**
-    *   Create `app/page.tsx` as the main whiteboard page.
+2.  **Basic Project Structure:**
+    *   `app/page.tsx` is the main whiteboard page.
     *   Create `components/canvas/Canvas.tsx`.
     *   Create `components/ui/Toolbar.tsx`.
     *   Consider a `lib/` directory for Konva helpers or types.
-4.  **Initial Page and Canvas Component:**
+3.  **Initial Page and Canvas Component:**
     *   Set up `app/page.tsx` to render the `Toolbar` and `Canvas` components.
     *   `Canvas.tsx` should initialize a basic Konva Stage.
 
