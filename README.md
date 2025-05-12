@@ -2,7 +2,9 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+Duplicate the `.env.example` file and name it `.env.local`. Update the env file with your specific aws id, key, and matching region.
+
+Then run the development server:
 
 ```bash
 npm run dev
